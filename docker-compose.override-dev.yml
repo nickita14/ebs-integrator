@@ -1,0 +1,32 @@
+version: '3'
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  backend:
+    image: django/binance
+    ports:
+      - "10100:10100"
+      - "5679:5679"
+    depends_on:
+      - db
+    networks:
+      - app-network
+    env_file:
+      - ./.env
+
+  db:
+    restart: unless-stopped
+    image: postgres:14
+    env_file:
+      - ./.env
+    volumes:
+      - ./docker/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=ebs-integrator
+      - POSTGRES_PASSWORD=ebs-integratorPwd!
+      - POSTGRES_DB=ebs-integrator
+    networks:
+      - app-network
