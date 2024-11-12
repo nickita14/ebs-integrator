@@ -13,6 +13,7 @@ RUN pip3 install --no-cache-dir --no-warn-script-location \
         Django \
         djangorestframework \
         requests \
+        psycopg2-binary \
         celery>=5.3.1 \
         redis>=4.6.0 \
         django-cors-headers \
@@ -35,4 +36,4 @@ EXPOSE 5678
 RUN pip3 install --no-cache-dir --no-warn-script-location \
         debugpy
 
-CMD ["sh", "-c", "python3 -m debugpy --listen 0.0.0.0:5679 manage.py runserver 0.0.0.0:10100"]
+CMD ["sh", "-c", "python3 -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:5000"]

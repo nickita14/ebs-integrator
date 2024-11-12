@@ -20,7 +20,7 @@ services:
 
   backend:
     restart: unless-stopped
-    image: django/binance
+    image: django/ebs-integrator
     build:
       context: ./docker/backend
     volumes:

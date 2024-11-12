@@ -16,5 +16,5 @@ urlpatterns = [
     path('api/schema/redoc/', staff_member_required(SpectacularRedocView.as_view(url_name='schema')), name='redoc'),
     path('api/schema/swagger-ui/', staff_member_required(SpectacularSwaggerView.as_view(url_name='schema')), name='django-admindocs-docroot'),
 
-    path('api/v1/', include('api.urls')),
+    # path('api/v1/', include('api.urls')),
 ]
