@@ -5,10 +5,11 @@ from functools import partial
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import Avg
+from django.db.models.functions import ExtractWeek, ExtractMonth
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import last_modified
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, OpenApiResponse
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from drf_standardized_errors.openapi_validation_errors import extend_validation_errors
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
@@ -17,10 +18,15 @@ from rest_framework import status
 
 from main.utils.view import AuthenticatedRestView, AuthenticatedModelViewSet, get_last_modified
 from main.openapi import FieldValidationError
+from .enums import AveragePricePeriod
 from .models import Category, Product, ProductPrice
 from .serializers.model import CategorySerializer, ProductSerializer, ProductPriceSerializer
 from .serializers.request import AveragePriceRequestSerializer, CategoryPriceRequestSerializer
-from .serializers.response import AveragePriceResponseSerializer
+from .serializers.response import (
+    AveragePriceResponseSerializer,
+    WeeklyAveragePriceResponseSerializer,
+    MonthlyAveragePriceResponseSerializer,
+)
 
 
 @extend_schema(tags=['Categoriy'])
@@ -140,16 +146,34 @@ class AveragePriceView(AuthenticatedRestView):
                 location=OpenApiParameter.QUERY,
                 type=OpenApiTypes.DATE,
                 required=True,
+                description='The start date of the date range.',
             ),
             OpenApiParameter(
                 name='end_date',
                 location=OpenApiParameter.QUERY,
                 type=OpenApiTypes.DATE,
                 required=True,
+                description='The end date of the date range.',
+            ),
+            OpenApiParameter(
+                name='period',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.STR,
+                required=False,
+                enum=AveragePricePeriod.values(),
+                description='The period to calculate the average price over. Calculate the whole specified date range if not provided.',
             ),
         ],
         responses={
-            200: AveragePriceResponseSerializer,
+            200: PolymorphicProxySerializer(
+                component_name='AveragePriceResponse',
+                serializers=[
+                    AveragePriceResponseSerializer,
+                    WeeklyAveragePriceResponseSerializer,
+                    MonthlyAveragePriceResponseSerializer
+                ],
+                resource_type_field_name='period',
+            ),
             204: OpenApiResponse(description='No products found for the specified date range.'),
         },
     )
@@ -161,6 +185,7 @@ class AveragePriceView(AuthenticatedRestView):
 
         start_date = serializer.validated_data['start_date']
         end_date = serializer.validated_data['end_date']
+        period = serializer.validated_data['period']
 
         prices = ProductPrice.objects.filter(
             product__category=category,
@@ -171,6 +196,21 @@ class AveragePriceView(AuthenticatedRestView):
         if not prices.exists():
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        average_price = prices.aggregate(avg_price=Avg('price'))['avg_price']
+        match period:
+            case AveragePricePeriod.WHOLE.value:
+                average_price = prices.aggregate(avg_price=Avg('price'))['avg_price']
+                response_serializer = AveragePriceResponseSerializer({"average_price": round(average_price, 2)})
 
-        return Response({"average_price": round(average_price, 2)}, status=status.HTTP_200_OK)
+            case AveragePricePeriod.WEEK.value:
+                weekly_avg_prices = prices.annotate(
+                    week=ExtractWeek('start_date')
+                ).values('week').annotate(avg_price=Avg('price')).order_by('week')
+                response_serializer = WeeklyAveragePriceResponseSerializer(weekly_avg_prices, many=True)
+
+            case AveragePricePeriod.MONTH.value:
+                monthly_avg_prices = prices.annotate(
+                    month=ExtractMonth('start_date')
+                ).values('month').annotate(avg_price=Avg('price')).order_by('month')
+                response_serializer = MonthlyAveragePriceResponseSerializer(monthly_avg_prices, many=True)
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)

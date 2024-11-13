@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from .enums import AveragePricePeriod
 from .models import Category, Product, ProductPrice
 
 
@@ -129,13 +131,41 @@ class AveragePriceViewTests(TestCase):
         ProductPrice.objects.create(product=self.product1, start_date=date(2023, 1, 1), end_date=date(2023, 12, 31), price=1000)
         ProductPrice.objects.create(product=self.product2, start_date=date(2023, 1, 1), end_date=date(2023, 12, 31), price=1500)
 
-    def test_average_price(self):
+    def test_average_price_whole_period(self):
         response = self.client.get(
             reverse('average-price', args=[self.category.id]),
-            {'start_date': '2023-01-01', 'end_date': '2023-12-31'}
+            {'start_date': '2023-01-01', 'end_date': '2023-12-31', 'period': AveragePricePeriod.WHOLE.value}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertAlmostEqual(response.data['average_price'], 1250.00, places=2)
+
+    def test_average_price_weekly(self):
+        response = self.client.get(
+            reverse('average-price', args=[self.category.id]),
+            {'start_date': '2023-01-01', 'end_date': '2023-12-31', 'period': AveragePricePeriod.WEEK.value}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        weekly_avg_prices = response.data
+        # Add assertions to check the weekly average prices
+        for week_data in weekly_avg_prices:
+            self.assertIn('week', week_data)
+            self.assertIn('avg_price', week_data)
+            self.assertIsInstance(week_data['week'], int)
+            self.assertIsInstance(week_data['avg_price'], float)
+
+    def test_average_price_monthly(self):
+        response = self.client.get(
+            reverse('average-price', args=[self.category.id]),
+            {'start_date': '2023-01-01', 'end_date': '2023-12-31', 'period': AveragePricePeriod.MONTH.value}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        monthly_avg_prices = response.data
+        # Add assertions to check the monthly average prices
+        for month_data in monthly_avg_prices:
+            self.assertIn('month', month_data)
+            self.assertIn('avg_price', month_data)
+            self.assertIsInstance(month_data['month'], int)
+            self.assertIsInstance(month_data['avg_price'], float)
 
     def test_average_price_no_prices(self):
         empty_category = Category.objects.create(name="Empty Category")

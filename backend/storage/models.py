@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -37,7 +39,7 @@ class ProductPrice(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='prices')
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -50,6 +52,14 @@ class ProductPrice(models.Model):
     def clean(self):
         if self.end_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': FieldValidationError.END_DATE_AFTER_START_DATE.value[1]})
+
+        overlapping_prices = ProductPrice.objects.filter(
+            product=self.product,
+            start_date__lte=self.end_date,
+            end_date__gte=self.start_date
+        ).exclude(pk=self.pk)
+
+        overlapping_prices.delete()
 
     def save(self, *args, **kwargs):
         self.clean()

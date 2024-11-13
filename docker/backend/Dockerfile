@@ -19,8 +19,7 @@ RUN pip3 install --no-cache-dir --no-warn-script-location \
         django-cors-headers \
         django-redis \
         drf-spectacular \
-        drf-standardized-errors[openapi] \
-        pydantic
+        drf-standardized-errors[openapi]
 
 FROM python:3.13-slim as runtime
 
