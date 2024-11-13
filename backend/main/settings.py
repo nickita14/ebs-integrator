@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_standardized_errors',
     'main.apps.MainConfig',
+    'storage.apps.StorageConfig',
 ]
 
 MIDDLEWARE = [

@@ -1,1 +1,1 @@
-# ebs-integrator
+# EBS Integrator

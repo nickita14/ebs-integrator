@@ -4,6 +4,8 @@ from django.conf.urls import include
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+from storage import urls as storage_urls
+
 
 admin.site.site_header = 'EBS Integrator Project'
 admin.site.site_title = 'EBS Integrator Project'
@@ -16,5 +18,5 @@ urlpatterns = [
     path('api/schema/redoc/', staff_member_required(SpectacularRedocView.as_view(url_name='schema')), name='redoc'),
     path('api/schema/swagger-ui/', staff_member_required(SpectacularSwaggerView.as_view(url_name='schema')), name='django-admindocs-docroot'),
 
-    # path('api/v1/', include('api.urls')),
+    path('api/v1/storage/', include(storage_urls.urlpatterns)),
 ]

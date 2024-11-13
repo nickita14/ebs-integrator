@@ -17,5 +17,8 @@ class FieldValidationError(Enum):
     MAX_LENGTH = ('max_length', serializers.CharField.default_error_messages['max_length'])
     INVALID_CHOICE = ('invalid_choice', serializers.ChoiceField.default_error_messages['invalid_choice'])
 
+    END_DATE_AFTER_START_DATE = ('end_date_after_start_date', 'End date must be after the start date.')
+    PRODUCT_UNIQUE_TOGETHER = ('product_unique_together', 'The combination of product, start date and end date must be unique.')
+
     def to_validation_error(self) -> ErrorDetail:
         return ErrorDetail(self.value[1], self.value[0])

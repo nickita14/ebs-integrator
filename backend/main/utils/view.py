@@ -1,9 +1,18 @@
+from django.db import models
+from django.db.models.aggregates import Max
+from django.utils import timezone as tz
+from rest_framework import viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
+
+
+def get_last_modified(request: Request, model: models.Model, *args, **kwargs):
+    default = tz.now()
+    res = model.objects.aggregate(updated=Max('updated'))
+    return (res['updated'] or default).replace(microsecond=0)
 
 
 class MinuteRateThrottle(SimpleRateThrottle):
@@ -11,9 +20,8 @@ class MinuteRateThrottle(SimpleRateThrottle):
     A rate limiter that limits the number of requests that can be made in a minute.
 
     Inherits from SimpleRateThrottle.
-
     """
-    rate = '600/min'
+    rate = '60/min'
 
     def get_cache_key(self, request: Request, *args) -> str:
         """
@@ -38,7 +46,7 @@ class MinuteRateThrottle(SimpleRateThrottle):
         }
 
 
-class BasicRestView(APIView):
+class BasicThrottleView(APIView):
     """
     A basic REST view that limits the number of requests that can be made in a minute.
 
@@ -47,11 +55,27 @@ class BasicRestView(APIView):
     throttle_classes = [MinuteRateThrottle]
 
 
-class AuthenticatedRestView(BasicRestView):
+class AuthenticatedView(BasicThrottleView):
     """
-    A basic REST view that requires authentication.
-
-    Inherits from BasicRestView.
+    A basic view that requires authentication.
     """
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
+
+
+class AuthenticatedRestView(AuthenticatedView):
+    """
+    A basic REST view that requires authentication.
+    """
+
+
+class AuthenticatedModelViewSet(AuthenticatedView, viewsets.ModelViewSet):
+    """
+    A basic ModelViewSet that requires authentication.
+    """
+    http_method_names = [
+        'get',
+        'post',
+        'put',
+        'delete',
+    ]
