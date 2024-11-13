@@ -5,7 +5,6 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-from rest_framework.authtoken.models import Token
 from .models import Category, Product, ProductPrice
 
 
@@ -13,8 +12,8 @@ class CategoryViewSetTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        User.objects.get_or_create(username="testuser", password="testpassword")
-        self.client.login(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
 
         self.category = Category.objects.create(name="Electronics")
         self.product = Product.objects.create(name="Smartphone", category=self.category, sku="SP1000")
@@ -34,12 +33,13 @@ class CategoryViewSetTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.category.name)
 
+
 class ProductViewSetTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        User.objects.get_or_create(username="testuser", password="testpassword")
-        self.client.login(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
 
         self.category = Category.objects.create(name="Electronics")
         self.product = Product.objects.create(name="Smartphone", category=self.category, sku="SP1000")
@@ -54,9 +54,14 @@ class ProductViewSetTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.product.name)
 
+
 class ProductPriceViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
+
         self.category = Category.objects.create(name="Electronics")
         self.product = Product.objects.create(name="Smartphone", category=self.category, sku="SP1000")
         self.valid_payload = {
@@ -84,9 +89,14 @@ class ProductPriceViewTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+
 class CategoryPriceViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
+
         self.category = Category.objects.create(name="Electronics")
         self.product1 = Product.objects.create(name="Smartphone", category=self.category, sku="SP1000")
         self.product2 = Product.objects.create(name="Laptop", category=self.category, sku="LT2000")
@@ -105,9 +115,14 @@ class CategoryPriceViewTests(TestCase):
         for product_price in ProductPrice.objects.filter(product__category=self.category):
             self.assertEqual(product_price.price, 1200)
 
+
 class AveragePriceViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
+
         self.category = Category.objects.create(name="Electronics")
         self.product1 = Product.objects.create(name="Smartphone", category=self.category, sku="SP1000")
         self.product2 = Product.objects.create(name="Laptop", category=self.category, sku="LT2000")
